@@ -107,6 +107,36 @@ struct SettingsPage {
             })
           }
 
+          // 隐私保护 (模拟)
+          GlassCard({ customPadding: StyleConstants.SPACE_MD }) {
+            Row() {
+              Column() {
+                Text('隐私保护锁')
+                  .fontSize(StyleConstants.FONT_MD)
+                  .fontColor(this.isDarkMode ? ThemeColors.Dark.TextPrimary : ThemeColors.Light.TextPrimary)
+                Text('开启指纹/面容校验体验')
+                  .fontSize(StyleConstants.FONT_XS)
+                  .fontColor(this.isDarkMode ? ThemeColors.Dark.TextSecondary : ThemeColors.Light.TextSecondary)
+                  .margin({ top: 4 })
+              }
+              .alignItems(HorizontalAlign.Start)
+
+              Toggle({ type: ToggleType.Switch, isOn: false })
+                .selectedColor(this.isDarkMode ? ThemeColors.Dark.Accent : ThemeColors.Light.Accent)
+                .onChange((isOn: boolean) => {
+                  if (isOn) {
+                    promptAction.showDialog({
+                      title: '生物识别校验',
+                      message: '正在模拟系统级安全验证...\n[ 🔐 验证成功 ]',
+                      buttons: [{ text: '确定', color: this.isDarkMode ? ThemeColors.Dark.Accent : ThemeColors.Light.Accent }]
+                    });
+                  }
+                })
+            }
+            .width('100%')
+            .justifyContent(FlexAlign.SpaceBetween)
+          }
+
           // 数据管理
           GlassCard({ customPadding: StyleConstants.SPACE_MD }) {
             Column({ space: StyleConstants.SPACE_MD }) {

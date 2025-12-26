@@ -3,6 +3,10 @@
     "pages/Index",
     "pages/DiaryEditPage",
     "pages/ProfileEditPage",
-    "pages/SettingsPage"
+    "pages/SettingsPage",
+    "pages/HealingToolsPage",
+    "pages/BreathExercisePage",
+    "pages/TrashBinPage",
+    "pages/InsightsPage"
   ]
 }

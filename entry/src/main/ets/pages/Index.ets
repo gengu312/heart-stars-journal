@@ -3,6 +3,7 @@ import router from '@ohos.router';
 import { CommonConstants } from '../common/constants/CommonConstants';
 import { ThemeColors, StyleConstants } from '../common/constants/ThemeConstants';
 import { GlassCard } from '../components/GlassCard';
+import { StarryBackground } from '../components/StarryBackground';
 import { DiaryEntry } from '../model/DiaryEntry';
 import { DatabaseManager } from '../service/DatabaseManager';
 import { PreferenceManager } from '../service/PreferenceManager';
@@ -33,11 +34,19 @@ struct Index {
 
   build() {
     Stack() {
-      // 1. 背景层
+      // 1. 底层动态背景
+      StarryBackground()
+      
+      // 2. 渐变叠加
       Column()
         .width('100%')
         .height('100%')
-        .backgroundColor(this.isDarkMode ? ThemeColors.Dark.Bg : ThemeColors.Light.Bg)
+        .linearGradient({
+          angle: 180,
+          colors: this.isDarkMode ? 
+            [[ThemeColors.Dark.Bg, 0.0], ['rgba(15, 23, 42, 0.8)', 1.0]] : 
+            [[ThemeColors.Light.Bg, 0.0], ['rgba(255, 247, 237, 0.8)', 1.0]]
+        })
         .transition(TransitionEffect.OPACITY.animation({ duration: 300 }))
 
       // 2. 内容层
@@ -82,6 +91,30 @@ struct Index {
             .border({ width: 1, color: this.isDarkMode ? 'rgba(252, 211, 77, 0.2)' : 'rgba(245, 158, 11, 0.2)' })
             .onClick(() => {
               router.pushUrl({ url: 'pages/ProfileEditPage' });
+            })
+
+            // 统计入口
+            Button({ type: ButtonType.Circle, stateEffect: true }) {
+              Text('📊')
+                .fontSize(16)
+            }
+            .width(36)
+            .height(36)
+            .backgroundColor(this.isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)')
+            .onClick(() => {
+              router.pushUrl({ url: 'pages/InsightsPage' });
+            })
+
+            // 治愈工具入口
+            Button({ type: ButtonType.Circle, stateEffect: true }) {
+              Text('🧘')
+                .fontSize(16)
+            }
+            .width(36)
+            .height(36)
+            .backgroundColor(this.isDarkMode ? 'rgba(252, 211, 77, 0.1)' : 'rgba(245, 158, 11, 0.1)')
+            .onClick(() => {
+              router.pushUrl({ url: 'pages/HealingToolsPage' });
             })
 
             // 设置按钮

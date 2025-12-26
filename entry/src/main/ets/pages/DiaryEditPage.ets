@@ -8,6 +8,7 @@ import { DatabaseManager } from '../service/DatabaseManager';
 import { StardustService } from '../service/StardustService';
 import { Logger } from '../common/utils/Logger';
 import promptAction from '@ohos.promptAction';
+import picker from '@ohos.file.picker';
 
 @Entry
 @Component
@@ -16,6 +17,7 @@ struct DiaryEditPage {
   @State content: string = '';
   @State mood: string = '😐';
   @State intensity: number = 3;
+  @State selectedImage: string = '';
   
   // 简单的心情列表
   private moodOptions: string[] = ['😄', '😌', '😐', '😣', '😠', '😢', '🤩'];
@@ -30,7 +32,9 @@ struct DiaryEditPage {
     const newDiary = new DiaryEntry(
       this.content,
       this.mood,
-      this.intensity
+      this.intensity,
+      [], // tags
+      this.selectedImage ? [this.selectedImage] : [] // images
     );
     
     try {
@@ -48,6 +52,21 @@ struct DiaryEditPage {
       router.back();
     } catch (err) {
       Logger.error(`Failed to save diary: ${JSON.stringify(err)}`);
+    }
+  }
+
+  async selectImage() {
+    try {
+      const photoSelectOptions = new picker.PhotoSelectOptions();
+      photoSelectOptions.MIMEType = picker.PhotoViewMIMETypes.IMAGE_TYPE;
+      photoSelectOptions.maxSelectNumber = 1;
+      const photoPicker = new picker.PhotoViewPicker();
+      const photoSelectResult = await photoPicker.select(photoSelectOptions);
+      if (photoSelectResult && photoSelectResult.photoUris.length > 0) {
+        this.selectedImage = photoSelectResult.photoUris[0];
+      }
+    } catch (err) {
+      Logger.error(`PhotoPicker failed: ${JSON.stringify(err)}`);
     }
   }
 
@@ -149,6 +168,54 @@ struct DiaryEditPage {
                 .onChange((value: string) => {
                   this.content = value;
                 })
+            }
+
+            // 图片选择预览
+            GlassCard({ customPadding: StyleConstants.SPACE_MD }) {
+              Column({ space: StyleConstants.SPACE_SM }) {
+                Text('图片记录 (可选)')
+                  .fontSize(StyleConstants.FONT_MD)
+                  .fontColor(this.isDarkMode ? ThemeColors.Dark.TextSecondary : ThemeColors.Light.TextSecondary)
+                  .width('100%')
+
+                if (this.selectedImage) {
+                  Stack({ alignContent: Alignment.TopEnd }) {
+                    Image(this.selectedImage)
+                      .width('100%')
+                      .height(200)
+                      .borderRadius(8)
+                      .objectFit(ImageFit.Cover)
+                    
+                    Button({ type: ButtonType.Circle }) {
+                      Text('×').fontColor('#FFFFFF').fontSize(16)
+                    }
+                    .width(24)
+                    .height(24)
+                    .backgroundColor('rgba(0,0,0,0.5)')
+                    .margin(8)
+                    .onClick(() => {
+                      this.selectedImage = '';
+                    })
+                  }
+                } else {
+                  Button() {
+                    Row() {
+                      Text('+ 添加图片')
+                        .fontColor(this.isDarkMode ? ThemeColors.Dark.TextPrimary : ThemeColors.Light.TextPrimary)
+                    }
+                  }
+                  .width('100%')
+                  .height(100)
+                  .backgroundColor(this.isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)')
+                  .borderRadius(8)
+                  .borderStyle(BorderStyle.Dashed)
+                  .borderWidth(1)
+                  .borderColor(this.isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)')
+                  .onClick(() => {
+                    this.selectImage();
+                  })
+                }
+              }
             }
           }
           .padding(StyleConstants.SPACE_MD)
