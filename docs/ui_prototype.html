@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>心辰手记 UI Prototype</title>
+    <style>
+        :root {
+            --midnight-blue: #0F172A;
+            --nebula-purple: #4C1D95;
+            --starlight-gold: #FCD34D;
+            --moonlight-white: #F8FAFC;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--midnight-blue);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(76, 29, 149, 0.4) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(252, 211, 77, 0.1) 0%, transparent 30%);
+            color: var(--moonlight-white);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .device-frame {
+            width: 375px;
+            height: 812px;
+            background: rgba(15, 23, 42, 0.95);
+            border-radius: 40px;
+            border: 8px solid #333;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 状态栏模拟 */
+        .status-bar {
+            height: 44px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        /* 顶部欢迎区 */
+        .header {
+            padding: 20px;
+        }
+        .date {
+            font-size: 14px;
+            opacity: 0.8;
+            color: rgba(248, 250, 252, 0.6);
+        }
+        .greeting {
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 4px;
+            background: linear-gradient(90deg, #fff, #FCD34D);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* 星辰余额 */
+        .stardust-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 6px 12px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .star-icon { color: var(--starlight-gold); }
+
+        /* 时间轴列表 */
+        .timeline {
+            padding: 0 20px;
+            height: 580px;
+            overflow-y: auto;
+        }
+
+        /* 玻璃卡片核心样式 */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05); /* 极淡的白 */
+            backdrop-filter: blur(20px);            /* 核心模糊 */
+            border: 1px solid rgba(255, 255, 255, 0.15); /* 微光边框 */
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+        .glass-card:active { transform: scale(0.98); }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 12px;
+            color: rgba(255,255,255,0.6);
+        }
+        
+        .mood-emoji { font-size: 24px; }
+        .card-content {
+            font-size: 15px;
+            line-height: 1.5;
+            margin-bottom: 10px;
+        }
+        .tags {
+            display: flex;
+            gap: 8px;
+        }
+        .tag {
+            font-size: 10px;
+            background: rgba(76, 29, 149, 0.3);
+            color: #d8b4fe;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        /* 悬浮按钮 */
+        .fab {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #FCD34D, #F97316);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 28px;
+            color: white;
+            box-shadow: 0 0 20px rgba(252, 211, 77, 0.4);
+            border: none;
+            cursor: pointer;
+            /* 呼吸动画 */
+            animation: breathe 3s infinite ease-in-out;
+        }
+
+        @keyframes breathe {
+            0%, 100% { transform: translateX(-50%) scale(1); box-shadow: 0 0 20px rgba(252, 211, 77, 0.4); }
+            50% { transform: translateX(-50%) scale(1.1); box-shadow: 0 0 30px rgba(252, 211, 77, 0.6); }
+        }
+
+        /* MBTI 每日建议卡片 */
+        .insight-card {
+            background: linear-gradient(135deg, rgba(76, 29, 149, 0.4), rgba(15, 23, 42, 0.4));
+            border: 1px solid rgba(167, 139, 250, 0.2);
+        }
+        .insight-title {
+            color: #FCD34D;
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- 手机外框 -->
+    <div class="device-frame">
+        <!-- 状态栏 -->
+        <div class="status-bar">
+            <span>9:41</span>
+            <span>📶 🔋</span>
+        </div>
+
+        <!-- 顶部 -->
+        <div class="header">
+            <div class="date">12月26日 星期四</div>
+            <div class="greeting">晚安，INFP 🌙</div>
+        </div>
+
+        <!-- 星辰积分 -->
+        <div class="stardust-badge">
+            <span class="star-icon">✨</span> 1,024
+        </div>
+
+        <!-- 内容区域 -->
+        <div class="timeline">
+            
+            <!-- 每日建议卡片 -->
+            <div class="glass-card insight-card">
+                <div class="insight-title">✨ 今日能量指引</div>
+                <div class="card-content" style="font-size: 14px; opacity: 0.9;">
+                    即使是最微弱的星光，也能照亮归途。作为一个INFP，今晚请允许自己沉浸在一段喜欢的音乐中吧。
+                </div>
+            </div>
+
+            <!-- 日记卡片 1 -->
+            <div class="glass-card">
+                <div class="card-header">
+                    <span>20:30 · 独处</span>
+                    <span class="mood-emoji">😌 平静</span>
+                </div>
+                <div class="card-content">
+                    今天工作虽然很忙，但在回家的路上看到了很美的晚霞。那一刻觉得所有疲惫都消散了。
+                </div>
+                <div class="tags">
+                    <span class="tag">#日常</span>
+                    <span class="tag">#小确幸</span>
+                </div>
+            </div>
+
+            <!-- 日记卡片 2 -->
+            <div class="glass-card">
+                <div class="card-header">
+                    <span>14:15 · 工作</span>
+                    <span class="mood-emoji">😫 焦虑</span>
+                </div>
+                <div class="card-content">
+                    项目进度有点赶，开会的时候感觉大家都很紧绷。深呼吸了几次，尝试用“星之呼吸”调节了一下，感觉好多了。
+                </div>
+                <div class="tags">
+                    <span class="tag">#工作</span>
+                    <span class="tag">#压力</span>
+                </div>
+            </div>
+
+             <!-- 日记卡片 3 -->
+             <div class="glass-card" style="opacity: 0.7;">
+                <div class="card-header">
+                    <span>昨天 23:00</span>
+                    <span class="mood-emoji">😴 疲惫</span>
+                </div>
+                <div class="card-content">
+                    早点睡吧，晚安世界。
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 记录按钮 -->
+        <button class="fab">+</button>
+
+    </div>
+
+</body>
+</html>
