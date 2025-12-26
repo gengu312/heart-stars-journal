@@ -1,17 +1,28 @@
 import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
+import { DatabaseManager } from '../service/DatabaseManager';
+import { PreferenceManager } from '../service/PreferenceManager';
 
 const DOMAIN = 0x0000;
 
 export default class EntryAbility extends UIAbility {
-  onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
+  async onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): Promise<void> {
     try {
       this.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET);
     } catch (err) {
       hilog.error(DOMAIN, 'testTag', 'Failed to set colorMode. Cause: %{public}s', JSON.stringify(err));
     }
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onCreate');
+
+    // Initialize Managers
+    try {
+      await DatabaseManager.getInstance().init(this.context);
+      await PreferenceManager.getInstance().init(this.context);
+      hilog.info(DOMAIN, 'HeartStarsJournal', 'Managers initialized successfully');
+    } catch (err) {
+      hilog.error(DOMAIN, 'HeartStarsJournal', 'Failed to initialize managers: %{public}s', JSON.stringify(err));
+    }
   }
 
   onDestroy(): void {
