@@ -18,40 +18,62 @@ struct DiaryEditPage {
   @State mood: string = '😐';
   @State intensity: number = 3;
   @State selectedImage: string = '';
-  
-  // 简单的心情列表
+  @State selectedTags: string[] = [];
+  @State moodGlowScale: number = 1.0;
+
   private moodOptions: string[] = ['😄', '😌', '😐', '😣', '😠', '😢', '🤩'];
+  private tagOptions: string[] = ['工作', '学习', '生活', '深夜', '独处', '社交', '运动', '旅行'];
+
+  aboutToAppear() {
+    this.startMoodGlow();
+  }
+
+  startMoodGlow() {
+    const glow = () => {
+      animateTo({ duration: 1000, curve: Curve.EaseInOut }, () => {
+        this.moodGlowScale = 1.15;
+      });
+      setTimeout(() => {
+        animateTo({ duration: 1000, curve: Curve.EaseInOut }, () => {
+          this.moodGlowScale = 1.0;
+        });
+      }, 1000);
+    };
+    glow();
+    setInterval(glow, 2000);
+  }
+
+  toggleTag(tag: string) {
+    const idx = this.selectedTags.indexOf(tag);
+    if (idx >= 0) {
+      this.selectedTags = this.selectedTags.filter(t => t !== tag);
+    } else {
+      this.selectedTags = [...this.selectedTags, tag];
+    }
+  }
 
   async saveDiary() {
     if (this.content.trim() === '') {
-      // 实际应用中应用弹窗提示
+      promptAction.showToast({ message: '请写下你的想法...' });
       return;
     }
-    
-    // 构造日记对象
     const newDiary = new DiaryEntry(
       this.content,
       this.mood,
       this.intensity,
-      [], // tags
-      this.selectedImage ? [this.selectedImage] : [] // images
+      this.selectedTags,
+      this.selectedImage ? [this.selectedImage] : []
     );
-    
     try {
       await DatabaseManager.getInstance().insertDiary(newDiary);
-      Logger.info('Diary saved successfully');
-      
-      // 增加积分
       const newTotal = await StardustService.getInstance().addStardust(StardustService.EARN_DIARY, 'Writing Diary');
-      
       promptAction.showToast({
-        message: `✨ 获得 ${StardustService.EARN_DIARY} 星辰！当前: ${newTotal}`,
+        message: '获得 ' + StardustService.EARN_DIARY + ' 星辰！当前: ' + newTotal,
         duration: 2000
       });
-
       router.back();
     } catch (err) {
-      Logger.error(`Failed to save diary: ${JSON.stringify(err)}`);
+      Logger.error('Failed to save diary: ' + JSON.stringify(err));
     }
   }
 
@@ -66,39 +88,30 @@ struct DiaryEditPage {
         this.selectedImage = photoSelectResult.photoUris[0];
       }
     } catch (err) {
-      Logger.error(`PhotoPicker failed: ${JSON.stringify(err)}`);
+      Logger.error('PhotoPicker failed: ' + JSON.stringify(err));
     }
   }
 
   build() {
     Stack() {
-      // 背景
       Column()
         .width('100%')
         .height('100%')
         .backgroundColor(this.isDarkMode ? ThemeColors.Dark.Bg : ThemeColors.Light.Bg)
 
-      // 内容区域
       Column() {
-        // 顶部导航栏
         Row() {
           Text('取消')
             .fontColor(this.isDarkMode ? ThemeColors.Dark.TextSecondary : ThemeColors.Light.TextSecondary)
-            .onClick(() => {
-              router.back();
-            })
-          
+            .onClick(() => router.back())
           Text('新日记')
             .fontSize(StyleConstants.FONT_LG)
             .fontWeight(FontWeight.Bold)
             .fontColor(this.isDarkMode ? ThemeColors.Dark.TextPrimary : ThemeColors.Light.TextPrimary)
-          
           Text('保存')
             .fontColor(this.isDarkMode ? ThemeColors.Dark.Accent : ThemeColors.Light.Accent)
             .fontWeight(FontWeight.Bold)
-            .onClick(() => {
-              this.saveDiary();
-            })
+            .onClick(() => this.saveDiary())
         }
         .width('100%')
         .justifyContent(FlexAlign.SpaceBetween)
@@ -106,29 +119,33 @@ struct DiaryEditPage {
 
         Scroll() {
           Column({ space: StyleConstants.SPACE_MD }) {
-            
-            // 心情选择
             GlassCard({ customPadding: StyleConstants.SPACE_MD }) {
               Column({ space: StyleConstants.SPACE_SM }) {
                 Text('此刻心情')
                   .fontSize(StyleConstants.FONT_MD)
                   .fontColor(this.isDarkMode ? ThemeColors.Dark.TextSecondary : ThemeColors.Light.TextSecondary)
                   .width('100%')
-                
-                // Emoji 列表
+
                 List({ space: StyleConstants.SPACE_SM }) {
                   ForEach(this.moodOptions, (item: string) => {
                     ListItem() {
-                      Text(item)
-                        .fontSize(32)
-                        .padding(8)
-                        .backgroundColor(this.mood === item ? 
-                          (this.isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)') : 
-                          Color.Transparent)
-                        .borderRadius(8)
-                        .onClick(() => {
-                          this.mood = item;
-                        })
+                      Stack() {
+                        if (this.mood === item) {
+                          Circle()
+                            .width(52)
+                            .height(52)
+                            .fill(this.isDarkMode ? 'rgba(252, 211, 77, 0.3)' : 'rgba(245, 158, 11, 0.3)')
+                            .scale({ x: this.moodGlowScale, y: this.moodGlowScale })
+                        }
+                        Text(item)
+                          .fontSize(32)
+                          .padding(8)
+                          .backgroundColor(this.mood === item ?
+                            (this.isDarkMode ? 'rgba(252, 211, 77, 0.2)' : 'rgba(245, 158, 11, 0.2)') :
+                            Color.Transparent)
+                          .borderRadius(12)
+                          .onClick(() => { this.mood = item; })
+                      }
                     }
                   })
                 }
@@ -136,21 +153,13 @@ struct DiaryEditPage {
                 .width('100%')
                 .scrollBar(BarState.Off)
 
-                // 强度滑块
                 Row() {
                   Text('强度')
                     .fontColor(this.isDarkMode ? ThemeColors.Dark.TextSecondary : ThemeColors.Light.TextSecondary)
-                  Slider({
-                    value: this.intensity,
-                    min: 1,
-                    max: 5,
-                    style: SliderStyle.OutSet
-                  })
+                  Slider({ value: this.intensity, min: 1, max: 5, style: SliderStyle.OutSet })
                     .trackColor(this.isDarkMode ? '#334155' : '#E2E8F0')
                     .selectedColor(this.isDarkMode ? ThemeColors.Dark.Accent : ThemeColors.Light.Accent)
-                    .onChange((value: number) => {
-                      this.intensity = value;
-                    })
+                    .onChange((value: number) => { this.intensity = value; })
                     .layoutWeight(1)
                 }
                 .width('100%')
@@ -158,19 +167,41 @@ struct DiaryEditPage {
               }
             }
 
-            // 文本输入
             GlassCard({ customPadding: StyleConstants.SPACE_MD }) {
-               TextArea({ placeholder: '写下此刻的想法...', text: this.content })
+              Column({ space: StyleConstants.SPACE_SM }) {
+                Text('场景标签')
+                  .fontSize(StyleConstants.FONT_MD)
+                  .fontColor(this.isDarkMode ? ThemeColors.Dark.TextSecondary : ThemeColors.Light.TextSecondary)
+                  .width('100%')
+
+                Flex({ wrap: FlexWrap.Wrap }) {
+                  ForEach(this.tagOptions, (tag: string) => {
+                    Text(tag)
+                      .fontSize(12)
+                      .fontColor(this.selectedTags.includes(tag) ?
+                        '#FFFFFF' :
+                        (this.isDarkMode ? ThemeColors.Dark.TextPrimary : ThemeColors.Light.TextPrimary))
+                      .backgroundColor(this.selectedTags.includes(tag) ?
+                        (this.isDarkMode ? ThemeColors.Dark.Accent : ThemeColors.Light.Accent) :
+                        (this.isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'))
+                      .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+                      .borderRadius(16)
+                      .margin({ right: 8, bottom: 8 })
+                      .onClick(() => this.toggleTag(tag))
+                  })
+                }
+              }
+            }
+
+            GlassCard({ customPadding: StyleConstants.SPACE_MD }) {
+              TextArea({ placeholder: '写下此刻的想法...', text: this.content })
                 .placeholderColor(this.isDarkMode ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)')
                 .fontColor(this.isDarkMode ? ThemeColors.Dark.TextPrimary : ThemeColors.Light.TextPrimary)
                 .backgroundColor(Color.Transparent)
-                .height(300)
-                .onChange((value: string) => {
-                  this.content = value;
-                })
+                .height(250)
+                .onChange((value: string) => { this.content = value; })
             }
 
-            // 图片选择预览
             GlassCard({ customPadding: StyleConstants.SPACE_MD }) {
               Column({ space: StyleConstants.SPACE_SM }) {
                 Text('图片记录 (可选)')
@@ -185,17 +216,13 @@ struct DiaryEditPage {
                       .height(200)
                       .borderRadius(8)
                       .objectFit(ImageFit.Cover)
-                    
                     Button({ type: ButtonType.Circle }) {
                       Text('×').fontColor('#FFFFFF').fontSize(16)
                     }
-                    .width(24)
-                    .height(24)
+                    .width(24).height(24)
                     .backgroundColor('rgba(0,0,0,0.5)')
                     .margin(8)
-                    .onClick(() => {
-                      this.selectedImage = '';
-                    })
+                    .onClick(() => { this.selectedImage = ''; })
                   }
                 } else {
                   Button() {
@@ -211,9 +238,7 @@ struct DiaryEditPage {
                   .borderStyle(BorderStyle.Dashed)
                   .borderWidth(1)
                   .borderColor(this.isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)')
-                  .onClick(() => {
-                    this.selectImage();
-                  })
+                  .onClick(() => this.selectImage())
                 }
               }
             }

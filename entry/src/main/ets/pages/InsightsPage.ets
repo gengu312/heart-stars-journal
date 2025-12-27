@@ -15,7 +15,9 @@ struct InsightsPage {
   @State monthlyMoods: DayMood[] = [];
   @State weeklyIntensity: number[] = [];
   @State personalizedAdvice: string = '正在观测星象...';
+  @State constellationFortune: string = '';
   @State mbti: string = 'default';
+  @State constellation: string = '-';
 
   async aboutToAppear() {
     await this.loadInsights();
@@ -25,17 +27,20 @@ struct InsightsPage {
     const now = new Date();
     this.monthlyMoods = await InsightService.getInstance().getMonthlyMoods(now.getFullYear(), now.getMonth() + 1);
     this.weeklyIntensity = await InsightService.getInstance().getWeeklyIntensity();
-    
+
     this.mbti = await PreferenceManager.getInstance().getValue(CommonConstants.PREF_KEY_MBTI, 'default') as string;
-    
-    // 获取最近一次日记的心情
-    const lastMood = this.monthlyMoods.length > 0 ? this.monthlyMoods[this.monthlyMoods.length - 1].mood : 'default';
+    this.constellation = await PreferenceManager.getInstance().getValue(CommonConstants.PREF_KEY_CONSTELLATION, '-') as string;
+
+    const lastMood = this.monthlyMoods.length > 0 ? this.monthlyMoods[this.monthlyMoods.length - 1].mood : '😐';
     this.personalizedAdvice = InsightService.getInstance().generateAdvice(this.mbti, lastMood);
+
+    if (this.constellation && this.constellation !== '-') {
+      this.constellationFortune = InsightService.getInstance().getConstellationFortune(this.constellation);
+    }
   }
 
   build() {
     Stack() {
-      // 背景
       Column()
         .width('100%')
         .height('100%')
@@ -43,12 +48,11 @@ struct InsightsPage {
 
       Scroll() {
         Column({ space: StyleConstants.SPACE_MD }) {
-          // 顶部标题
           Row() {
             Text('< 返回')
               .fontColor(this.isDarkMode ? ThemeColors.Dark.TextSecondary : ThemeColors.Light.TextSecondary)
               .onClick(() => router.back())
-            
+
             Text('星辰洞察')
               .fontSize(StyleConstants.FONT_LG)
               .fontWeight(FontWeight.Bold)
@@ -60,7 +64,6 @@ struct InsightsPage {
           .width('100%')
           .padding({ top: StyleConstants.SPACE_MD, bottom: StyleConstants.SPACE_MD })
 
-          // 1. 人格建议
           GlassCard({ customPadding: StyleConstants.SPACE_LG }) {
             Column() {
               Row() {
@@ -68,7 +71,7 @@ struct InsightsPage {
                   .fontSize(StyleConstants.FONT_MD)
                   .fontWeight(FontWeight.Bold)
                   .fontColor(this.isDarkMode ? ThemeColors.Dark.Accent : ThemeColors.Light.Accent)
-                
+
                 Text(this.mbti)
                   .fontSize(12)
                   .padding({ left: 8, right: 8, top: 2, bottom: 2 })
@@ -84,17 +87,35 @@ struct InsightsPage {
                 .fontSize(16)
                 .lineHeight(26)
                 .fontColor(this.isDarkMode ? ThemeColors.Dark.TextPrimary : ThemeColors.Light.TextPrimary)
-                .italic()
             }
             .alignItems(HorizontalAlign.Start)
           }
 
-          // 2. 情绪月历
+          if (this.constellation && this.constellation !== '-' && this.constellationFortune) {
+            GlassCard({ customPadding: StyleConstants.SPACE_LG }) {
+              Column() {
+                Row() {
+                  Text('🌟 ' + this.constellation + ' 今日运势')
+                    .fontSize(StyleConstants.FONT_MD)
+                    .fontWeight(FontWeight.Bold)
+                    .fontColor(this.isDarkMode ? ThemeColors.Dark.Accent : ThemeColors.Light.Accent)
+                }
+                .width('100%')
+                .margin({ bottom: 12 })
+
+                Text(this.constellationFortune)
+                  .fontSize(15)
+                  .lineHeight(24)
+                  .fontColor(this.isDarkMode ? ThemeColors.Dark.TextPrimary : ThemeColors.Light.TextPrimary)
+              }
+              .alignItems(HorizontalAlign.Start)
+            }
+          }
+
           GlassCard({ customPadding: 0 }) {
             MoodCalendar({ moods: this.monthlyMoods })
           }
 
-          // 3. 趋势图表
           GlassCard({ customPadding: 0 }) {
             MoodChart({ data: this.weeklyIntensity })
           }

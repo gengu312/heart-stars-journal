@@ -10,3 +10,6 @@
 /.clang-tidy
 **/.test
 /.appanalyzer
+# 文件历史记录（不应提交到版本控制）
+**/*.history
+**/.history

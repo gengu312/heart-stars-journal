@@ -15,43 +15,74 @@ struct Index {
   @StorageLink('isDarkMode') isDarkMode: boolean = true;
   @State diaryList: DiaryEntry[] = [];
   @State totalStardust: number = 0;
+  @State fabScale: number = 1.0;
+  @State fabShadowRadius: number = 10;
+  @State cardPressedId: number = -1;
+
+  async aboutToAppear() {
+    const savedTheme = await PreferenceManager.getInstance().getValue(CommonConstants.PREF_KEY_THEME_MODE, 'dark');
+    this.isDarkMode = savedTheme === 'dark';
+    this.startFabBreathing();
+  }
 
   async onPageShow() {
     await this.loadData();
   }
-  
+
   async loadData() {
     this.diaryList = await DatabaseManager.getInstance().queryAllDiaries();
     const stardust = await PreferenceManager.getInstance().getValue(CommonConstants.PREF_KEY_TOTAL_STARDUST, 0);
     this.totalStardust = stardust as number;
-    // Load theme setting if exist, default to true (dark)
-    // Here we just use default true for now to initialize AppStorage if not set
   }
 
-  toggleTheme() {
+  startFabBreathing() {
+    const breathe = () => {
+      animateTo({ duration: 1500, curve: Curve.EaseInOut }, () => {
+        this.fabScale = 1.1;
+        this.fabShadowRadius = 20;
+      });
+      setTimeout(() => {
+        animateTo({ duration: 1500, curve: Curve.EaseInOut }, () => {
+          this.fabScale = 1.0;
+          this.fabShadowRadius = 10;
+        });
+      }, 1500);
+    };
+    breathe();
+    setInterval(breathe, 3000);
+  }
+
+  async toggleTheme() {
     this.isDarkMode = !this.isDarkMode;
+    await PreferenceManager.getInstance().putValue(
+      CommonConstants.PREF_KEY_THEME_MODE,
+      this.isDarkMode ? 'dark' : 'light'
+    );
+  }
+
+  openDiaryDetail(diary: DiaryEntry) {
+    router.pushUrl({
+      url: 'pages/DiaryDetailPage',
+      params: { diaryId: diary.id }
+    });
   }
 
   build() {
     Stack() {
-      // 1. 底层动态背景
       StarryBackground()
-      
-      // 2. 渐变叠加
+
       Column()
         .width('100%')
         .height('100%')
         .linearGradient({
           angle: 180,
-          colors: this.isDarkMode ? 
-            [[ThemeColors.Dark.Bg, 0.0], ['rgba(15, 23, 42, 0.8)', 1.0]] : 
+          colors: this.isDarkMode ?
+            [[ThemeColors.Dark.Bg, 0.0], ['rgba(15, 23, 42, 0.8)', 1.0]] :
             [[ThemeColors.Light.Bg, 0.0], ['rgba(255, 247, 237, 0.8)', 1.0]]
         })
         .transition(TransitionEffect.OPACITY.animation({ duration: 300 }))
 
-      // 2. 内容层
       Column() {
-        // 顶部状态栏
         Row() {
           Column() {
             Text('HeartStars')
@@ -66,7 +97,6 @@ struct Index {
           .alignItems(HorizontalAlign.Start)
 
           Row({ space: StyleConstants.SPACE_SM }) {
-            // 主题切换按钮 (测试用)
             Button({ type: ButtonType.Circle, stateEffect: true }) {
               Text(this.isDarkMode ? '🌙' : '☀️')
                 .fontSize(16)
@@ -74,14 +104,11 @@ struct Index {
             .width(36)
             .height(36)
             .backgroundColor(this.isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)')
-            .onClick(() => {
-              this.toggleTheme();
-            })
+            .onClick(() => { this.toggleTheme(); })
 
-            // 积分胶囊
             Row() {
               Text('✨')
-              Text(` ${this.totalStardust}`)
+              Text(' ' + this.totalStardust)
                 .fontColor(this.isDarkMode ? ThemeColors.Dark.Accent : ThemeColors.Light.Accent)
                 .fontWeight(FontWeight.Bold)
             }
@@ -89,54 +116,35 @@ struct Index {
             .backgroundColor(this.isDarkMode ? 'rgba(252, 211, 77, 0.1)' : 'rgba(245, 158, 11, 0.1)')
             .borderRadius(20)
             .border({ width: 1, color: this.isDarkMode ? 'rgba(252, 211, 77, 0.2)' : 'rgba(245, 158, 11, 0.2)' })
-            .onClick(() => {
-              router.pushUrl({ url: 'pages/ProfileEditPage' });
-            })
+            .onClick(() => { router.pushUrl({ url: 'pages/ProfileEditPage' }); })
 
-            // 统计入口
             Button({ type: ButtonType.Circle, stateEffect: true }) {
-              Text('📊')
-                .fontSize(16)
+              Text('📊').fontSize(16)
             }
-            .width(36)
-            .height(36)
+            .width(36).height(36)
             .backgroundColor(this.isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)')
-            .onClick(() => {
-              router.pushUrl({ url: 'pages/InsightsPage' });
-            })
+            .onClick(() => { router.pushUrl({ url: 'pages/InsightsPage' }); })
 
-            // 治愈工具入口
             Button({ type: ButtonType.Circle, stateEffect: true }) {
-              Text('🧘')
-                .fontSize(16)
+              Text('🧘').fontSize(16)
             }
-            .width(36)
-            .height(36)
+            .width(36).height(36)
             .backgroundColor(this.isDarkMode ? 'rgba(252, 211, 77, 0.1)' : 'rgba(245, 158, 11, 0.1)')
-            .onClick(() => {
-              router.pushUrl({ url: 'pages/HealingToolsPage' });
-            })
+            .onClick(() => { router.pushUrl({ url: 'pages/HealingToolsPage' }); })
 
-            // 设置按钮
             Button({ type: ButtonType.Circle, stateEffect: true }) {
-              Text('⚙️')
-                .fontSize(16)
+              Text('⚙️').fontSize(16)
             }
-            .width(36)
-            .height(36)
+            .width(36).height(36)
             .backgroundColor(this.isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)')
-            .onClick(() => {
-              router.pushUrl({ url: 'pages/SettingsPage' });
-            })
+            .onClick(() => { router.pushUrl({ url: 'pages/SettingsPage' }); })
           }
         }
         .width('100%')
         .justifyContent(FlexAlign.SpaceBetween)
         .padding({ left: StyleConstants.SPACE_LG, right: StyleConstants.SPACE_LG, top: 48, bottom: StyleConstants.SPACE_MD })
 
-        // 列表区域
         List({ space: StyleConstants.SPACE_MD }) {
-          // 头部占位，增加一些留白
           ListItem() {
              Text(this.diaryList.length === 0 ? '还没有日记，点击右下角记录第一条吧~' : '最近回顾')
               .fontSize(StyleConstants.FONT_SM)
@@ -149,9 +157,7 @@ struct Index {
               GlassCard() {
                 Column() {
                   Row() {
-                    Text(item.mood)
-                      .fontSize(24)
-                    
+                    Text(item.mood).fontSize(24)
                     Column() {
                       Text(new Date(item.createdAt).toLocaleTimeString())
                          .fontSize(StyleConstants.FONT_XS)
@@ -172,12 +178,36 @@ struct Index {
                     .maxLines(3)
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
                     .width('100%')
+
+                  if (item.tags && item.tags.length > 0) {
+                    Row({ space: 6 }) {
+                      ForEach(item.tags, (tag: string) => {
+                        Text(tag)
+                          .fontSize(10)
+                          .fontColor(this.isDarkMode ? ThemeColors.Dark.Accent : ThemeColors.Light.Accent)
+                          .backgroundColor(this.isDarkMode ? 'rgba(252, 211, 77, 0.15)' : 'rgba(245, 158, 11, 0.15)')
+                          .padding({ left: 8, right: 8, top: 2, bottom: 2 })
+                          .borderRadius(10)
+                      })
+                    }
+                    .width('100%')
+                    .margin({ top: 8 })
+                  }
                 }
               }
+              .scale({ x: this.cardPressedId === item.id ? 0.98 : 1.0, y: this.cardPressedId === item.id ? 0.98 : 1.0 })
+              .animation({ duration: 100, curve: Curve.EaseOut })
+              .onTouch((event: TouchEvent) => {
+                if (event.type === TouchType.Down) {
+                  this.cardPressedId = item.id;
+                } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+                  this.cardPressedId = -1;
+                }
+              })
+              .onClick(() => { this.openDiaryDetail(item); })
             }
           })
-          
-          // 底部占位，防止 FAB 遮挡
+
           ListItem().height(80)
         }
         .width('100%')
@@ -185,7 +215,6 @@ struct Index {
         .padding({ left: StyleConstants.SPACE_MD, right: StyleConstants.SPACE_MD })
       }
 
-      // 悬浮按钮 (FAB)
       Button({ type: ButtonType.Circle, stateEffect: true }) {
         Text('+')
           .fontSize(32)
@@ -196,10 +225,13 @@ struct Index {
       .height(56)
       .position({ x: '80%', y: '85%' })
       .backgroundColor(this.isDarkMode ? ThemeColors.Dark.Accent : ThemeColors.Light.Accent)
-      .shadow({ radius: 10, color: this.isDarkMode ? ThemeColors.Dark.Accent : ThemeColors.Light.Accent, offsetY: 5 })
-      .onClick(() => {
-        router.pushUrl({ url: 'pages/DiaryEditPage' });
+      .shadow({
+        radius: this.fabShadowRadius,
+        color: this.isDarkMode ? ThemeColors.Dark.Accent : ThemeColors.Light.Accent,
+        offsetY: 5
       })
+      .scale({ x: this.fabScale, y: this.fabScale })
+      .onClick(() => { router.pushUrl({ url: 'pages/DiaryEditPage' }); })
     }
   }
 }

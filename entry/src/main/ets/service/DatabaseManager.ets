@@ -31,14 +31,12 @@ export class DatabaseManager {
       await this.createTables();
     } catch (err) {
       const error = err as BusinessError;
-      Logger.error(`Failed to init RdbStore: ${JSON.stringify(error)}`);
+      Logger.error('Failed to init RdbStore: ' + JSON.stringify(error));
     }
   }
 
   private async createTables(): Promise<void> {
-    if (!this.rdbStore) {
-      return;
-    }
+    if (!this.rdbStore) return;
 
     const createDiaryTable = `
       CREATE TABLE IF NOT EXISTS ${CommonConstants.DIARY_TABLE} (
@@ -68,21 +66,19 @@ export class DatabaseManager {
       Logger.info('Tables created successfully');
     } catch (err) {
       const error = err as BusinessError;
-      Logger.error(`Failed to create tables: ${JSON.stringify(error)}`);
+      Logger.error('Failed to create tables: ' + JSON.stringify(error));
     }
   }
 
-  // Basic CRUD for Diary
   public async insertDiary(diary: DiaryEntry): Promise<number> {
-    if (!this.rdbStore) {
-      return -1;
-    }
+    if (!this.rdbStore) return -1;
+
     const valueBucket: relationalStore.ValuesBucket = {
       content: diary.content,
       mood: diary.mood,
       intensity: diary.intensity,
-      tags: diary.tags,
-      images: diary.images,
+      tags: JSON.stringify(diary.tags),
+      images: JSON.stringify(diary.images),
       createdAt: diary.createdAt,
       updatedAt: diary.updatedAt
     };
@@ -90,26 +86,89 @@ export class DatabaseManager {
   }
 
   public async queryAllDiaries(): Promise<DiaryEntry[]> {
-    if (!this.rdbStore) {
-      return [];
-    }
+    if (!this.rdbStore) return [];
+
     let predicates = new relationalStore.RdbPredicates(CommonConstants.DIARY_TABLE);
     predicates.orderByDesc('createdAt');
     let resultSet = await this.rdbStore.query(predicates);
     let diaries: DiaryEntry[] = [];
+
     while (resultSet.goToNextRow()) {
-      diaries.push(new DiaryEntry(
-        resultSet.getString(resultSet.getColumnIndex('content')),
-        resultSet.getString(resultSet.getColumnIndex('mood')),
-        resultSet.getLong(resultSet.getColumnIndex('intensity')),
-        JSON.parse(resultSet.getString(resultSet.getColumnIndex('tags'))),
-        JSON.parse(resultSet.getString(resultSet.getColumnIndex('images'))),
-        resultSet.getLong(resultSet.getColumnIndex('id')),
-        resultSet.getLong(resultSet.getColumnIndex('createdAt')),
-        resultSet.getLong(resultSet.getColumnIndex('updatedAt')),
-      ));
+      diaries.push(this.parseDiaryFromResultSet(resultSet));
     }
     resultSet.close();
     return diaries;
+  }
+
+  public async queryDiaryById(id: number): Promise<DiaryEntry | null> {
+    if (!this.rdbStore) return null;
+
+    let predicates = new relationalStore.RdbPredicates(CommonConstants.DIARY_TABLE);
+    predicates.equalTo('id', id);
+    let resultSet = await this.rdbStore.query(predicates);
+
+    if (resultSet.goToNextRow()) {
+      const diary = this.parseDiaryFromResultSet(resultSet);
+      resultSet.close();
+      return diary;
+    }
+    resultSet.close();
+    return null;
+  }
+
+  public async updateDiary(diary: DiaryEntry): Promise<number> {
+    if (!this.rdbStore) return -1;
+
+    const valueBucket: relationalStore.ValuesBucket = {
+      content: diary.content,
+      mood: diary.mood,
+      intensity: diary.intensity,
+      tags: JSON.stringify(diary.tags),
+      images: JSON.stringify(diary.images),
+      updatedAt: Date.now()
+    };
+
+    let predicates = new relationalStore.RdbPredicates(CommonConstants.DIARY_TABLE);
+    predicates.equalTo('id', diary.id);
+    return await this.rdbStore.update(valueBucket, predicates);
+  }
+
+  public async deleteDiary(id: number): Promise<number> {
+    if (!this.rdbStore) return -1;
+
+    let predicates = new relationalStore.RdbPredicates(CommonConstants.DIARY_TABLE);
+    predicates.equalTo('id', id);
+    return await this.rdbStore.delete(predicates);
+  }
+
+  private parseDiaryFromResultSet(resultSet: relationalStore.ResultSet): DiaryEntry {
+    let tagsStr = resultSet.getString(resultSet.getColumnIndex('tags'));
+    let imagesStr = resultSet.getString(resultSet.getColumnIndex('images'));
+
+    let tags: string[] = [];
+    let images: string[] = [];
+
+    try {
+      tags = JSON.parse(tagsStr || '[]');
+    } catch (e) {
+      tags = [];
+    }
+
+    try {
+      images = JSON.parse(imagesStr || '[]');
+    } catch (e) {
+      images = [];
+    }
+
+    return new DiaryEntry(
+      resultSet.getString(resultSet.getColumnIndex('content')),
+      resultSet.getString(resultSet.getColumnIndex('mood')),
+      resultSet.getLong(resultSet.getColumnIndex('intensity')),
+      tags,
+      images,
+      resultSet.getLong(resultSet.getColumnIndex('id')),
+      resultSet.getLong(resultSet.getColumnIndex('createdAt')),
+      resultSet.getLong(resultSet.getColumnIndex('updatedAt'))
+    );
   }
 }
